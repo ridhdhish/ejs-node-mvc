@@ -6,6 +6,12 @@ const cookie = require("cookie");
 const handleErrors = (err) => {
   let errors = { email: "", password: "" };
 
+  // Incorrect credentials
+  if (err.message === "Incorrect Credentials!") {
+    errors.email = "Incorrect Credentials!";
+    errors.password = "Incorrect Credentials!";
+  }
+
   //Duplicate error code
   if (err.code === 11000) {
     errors.email = "Email is already registered";
@@ -50,13 +56,22 @@ module.exports.signup_post = async (req, res) => {
   } catch (err) {
     console.log(err);
     const errors = handleErrors(err);
-    res.status(400).json(errors);
+    res.status(400).json({ errors });
   }
 };
 
 // Login API
 module.exports.login_post = async (req, res) => {
-  const { email } = req.body;
-  console.log(email);
-  res.send("user login");
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.login(email, password);
+    const token = createToken(user._id);
+    res.cookie("jwt", token, { httpOnly: true, maxAge: maxAge * 1000 });
+    res.status(200).json({ user: user._id });
+  } catch (err) {
+    console.log(err.message);
+    const errors = handleErrors(err);
+    res.status(404).json({ errors });
+  }
 };
